@@ -1,6 +1,6 @@
 -- name: InsertUser :one
-INSERT INTO users (name, age, gender, email) 
-VALUES ($1, $2, $3, $4)
+INSERT INTO users (name, age, gender, email, password) 
+VALUES ($1, $2, $3, $4, $5)
 RETURNING id;
 
 
@@ -28,6 +28,6 @@ WHERE id = $1;
 
 
 -- name: GetUserByEmail :one
-SELECT id, name, age, gender, email, password_hash 
+SELECT id, name, age, gender, email, password 
 FROM users 
 WHERE email = $1;

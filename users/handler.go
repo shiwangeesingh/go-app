@@ -3,15 +3,17 @@ package users
 import (
 	"encoding/json"
 	"net/http"
+	"log"
+	"database/sql"
 
-	"github.com/shiwangeesingh/goFirstProject/internal/db"
-	"github.com/shiwangeesingh/goFirstProject/config/utils"
+	"github.com/shiwangeesingh/go-app/internal/db"
+	// "github.com/shiwangeesingh/go-app/utils"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Credentials struct {
 	Name string `json:"name"`
-	Password string `json:"password"`
+	Password  []byte `json:"password_hash"`
 }
 
 type user struct {
@@ -20,10 +22,11 @@ type user struct {
 	Email  string `json:"email"`
 	Age    int32  `json:"age"`
 	Gender string `json:"gender"`
-	Password string `json:"password"`
+	Password  []byte `json:"password"`
 }
 
 var queries *db.Queries
+var conn *sql.DB // Store DB connection separately
 
 // Register a new user
 // func RegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -48,7 +51,7 @@ var queries *db.Queries
 // 	w.WriteHeader(http.StatusCreated)
 // }
 
-func createUser(w http.ResponseWriter, r *http.Request) {
+func CreateUser(w http.ResponseWriter, r *http.Request) {
 	var newUser user
 	log.Printf("Register user is called")
 
@@ -87,7 +90,7 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 		Age:    newUser.Age,
 		Gender: newUser.Gender,
 		Email:  newUser.Email,
-		Password: hashedPassword
+		Password: hashedPassword,
 	})
 	log.Printf("userID", userID)
 	if err != nil {
@@ -128,45 +131,68 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 }
 
 // Login user and return JWT token
-func LoginHandler(w http.ResponseWriter, r *http.Request) {
-	var creds Credentials
-	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
-		http.Error(w, "Invalid input", http.StatusBadRequest)
-		return
-	}
+// func LoginHandler(w http.ResponseWriter, r *http.Request) {
+// 	var creds Credentials
+// 	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
+// 		http.Error(w, "Invalid input", http.StatusBadRequest)
+// 		return
+// 	}
 
-	var storedHash string
-	err := db.DB.Get(&storedHash, "SELECT password_hash FROM users WHERE username=$1", creds.Username)
-	if err != nil {
-		http.Error(w, "User not found", http.StatusUnauthorized)
-		return
-	}
+// 	var storedHash string
+// 	err := db.DB.Get(&storedHash, "SELECT password_hash FROM users WHERE username=$1", creds.Username)
+// 	if err != nil {
+// 		http.Error(w, "User not found", http.StatusUnauthorized)
+// 		return
+// 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(creds.Password)); err != nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
-		return
-	}
+// 	if err := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(creds.Password)); err != nil {
+// 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+// 		return
+// 	}
 
-	token, err := utils.GenerateToken(creds.Name)
-	if err != nil {
-		http.Error(w, "Error generating token", http.StatusInternalServerError)
-		return
-	}
+// 	token, err := utils.GenerateToken(creds.Name)
+// 	if err != nil {
+// 		http.Error(w, "Error generating token", http.StatusInternalServerError)
+// 		return
+// 	}
 
-	json.NewEncoder(w).Encode(map[string]string{"token": token})
+// 	json.NewEncoder(w).Encode(map[string]string{"token": token})
+// }
+
+// 🔹 Corrected `getGeneration` function
+func getGeneration(age int32) (string, string) {
+	switch {
+	case age <= 12:
+		return "Generation Alpha", "C"
+	case age <= 28:
+		return "Generation Z", "B"
+	case age <= 44:
+		return "Millennials", "A"
+	default:
+		return "Unknown", ""
+	}
 }
 
 
+func AuthenticateUser(w http.ResponseWriter, r *http.Request) {
+//	queries := db.New(db.DB) // Initialize SQLC queries
+var newUser user
 
-func AuthenticateUser(ctx context.Context, email, password string) (*db.User, error) {
-	queries := db.New(db.DB) // Initialize SQLC queries
-
-	user, err := queries.GetUserByEmail(ctx, email)
+	// Decode JSON request
+	if err := json.NewDecoder(r.Body).Decode(&newUser); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+	user, err := queries.GetUserByEmail(r.Context(), newUser.Email)
 	if err != nil {
-		return nil, errors.New("user not found")
+		 http.Error(w, "user not found", http.StatusBadRequest)
+		 return;
 	}
 
 	// Compare hashed password
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		return nil, errors.New("invalid password")
-	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(newUser.Password)); err != nil {
+		 http.Error(w, "invalid password", http.StatusBadRequest)
+		 return;
+
+	} 
+}

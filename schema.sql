@@ -4,7 +4,7 @@ CREATE TABLE users (
     age INT NOT NULL,
     gender TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL  -- Fix: Added data type and missing comma
+    password BYTEA NOT NULL  -- Fix: Added data type and missing comma
 );
 
 CREATE TABLE user_generation (

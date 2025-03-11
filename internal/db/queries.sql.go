@@ -19,7 +19,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, name, age, gender, email, password_hash 
+SELECT id, name, age, gender, email, password 
 FROM users 
 WHERE email = $1
 `
@@ -33,7 +33,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Age,
 		&i.Gender,
 		&i.Email,
-		&i.PasswordHash,
+		&i.Password,
 	)
 	return i, err
 }
@@ -109,16 +109,17 @@ func (q *Queries) InsertGeneration(ctx context.Context, arg InsertGenerationPara
 }
 
 const insertUser = `-- name: InsertUser :one
-INSERT INTO users (name, age, gender, email) 
-VALUES ($1, $2, $3, $4)
+INSERT INTO users (name, age, gender, email, password) 
+VALUES ($1, $2, $3, $4, $5)
 RETURNING id
 `
 
 type InsertUserParams struct {
-	Name   string
-	Age    int32
-	Gender string
-	Email  string
+	Name     string
+	Age      int32
+	Gender   string
+	Email    string
+	Password []byte
 }
 
 func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (int32, error) {
@@ -127,6 +128,7 @@ func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (int32, 
 		arg.Age,
 		arg.Gender,
 		arg.Email,
+		arg.Password,
 	)
 	var id int32
 	err := row.Scan(&id)

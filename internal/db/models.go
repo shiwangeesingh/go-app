@@ -5,12 +5,12 @@
 package db
 
 type User struct {
-	ID           int32
-	Name         string
-	Age          int32
-	Gender       string
-	Email        string
-	PasswordHash string
+	ID       int32
+	Name     string
+	Age      int32
+	Gender   string
+	Email    string
+	Password []byte
 }
 
 type UserGeneration struct {
